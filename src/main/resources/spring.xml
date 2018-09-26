@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xsi:schemaLocation="
+       http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+       http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd
+       http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd
+     ">
+    <context:component-scan base-package="com.jaremo.test_shiro.ssshiro">
+        <!-- 在根配置文件中,需要排除@Controller -->
+        <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Controller"></context:exclude-filter>
+    </context:component-scan>
+    <!-- 数据库的连接
+        配置数据源
+    -->
+    <context:property-placeholder location="classpath:jdbc.properties"></context:property-placeholder>
+    <!-- 使用的连接池为ali 的druid连接池 -->
+    <bean id="dataSource" class="com.alibaba.druid.pool.DruidDataSource">
+        <property name="driverClassName" value="${driverClass}"></property>
+        <property name="url" value="${url}"></property>
+        <property name="username" value="${user}"></property>
+        <property name="password" value="${pwd}"></property>
+        <!--
+            initialSize 设置初始化连接数
+            maxActive 设置最大的连接数
+            maxIdle 设置最大的空闲连接数
+            filters 开启sql统计功能
+        -->
+        <property name="initialSize" value="1"></property>
+        <property name="maxActive" value="200"></property>
+        <property name="maxIdle" value="50"></property>
+        <property name="filters" value="stat"></property>
+    </bean>
+
+    <!-- 应用mybatis -->
+    <!-- sqlSessionFactoryBean相当于 SqlSessionFactory -->
+    <bean id="sqlSessionFactoryBean" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <property name="dataSource" ref="dataSource"></property>
+    </bean>
+    <!-- 相当于mybatis中的Sqlsession -->
+    <bean id="sessionTemplate" class="org.mybatis.spring.SqlSessionTemplate">
+        <constructor-arg index="0" ref="sqlSessionFactoryBean"></constructor-arg>
+    </bean>
+    <!-- 既然做ssm集成那么就免去mybatis的配置文件 , 这个bean是读取mybatis的接口映射的  -->
+    <bean id="scannerConfigurer" class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <property name="basePackage" value="com.jaremo.test_shiro.ssshiro.dao"></property>
+    </bean>
+
+    <!-- 操作事务,应在service层 , 故在spring根配置文件中配置事务管理器-->
+    <bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="dataSource"></property>
+    </bean>
+
+    <!-- 所有的安全管理 都需进入这个类-->
+    <bean id="securityManager" class="org.apache.shiro.web.mgt.DefaultWebSecurityManager">
+        <property name="realm" ref="myRealm"/>
+    </bean>
+    <!--  为了关闭 securityManager-->
+    <bean id="lifecycleBeanPostProcessor" class="org.apache.shiro.spring.LifecycleBeanPostProcessor"/>
+    <!-- shiro在spring中的配置 -->
+    <bean id="shiroFilter" class="org.apache.shiro.spring.web.ShiroFilterFactoryBean">
+        <property name="securityManager" ref="securityManager"/>
+        <property name="loginUrl" value="/shiropage/login.html"/>
+        <property name="successUrl" value="/shiropage/suc.jsp"/>
+        <property name="unauthorizedUrl" value="/shiropage/fail.jsp"/>
+        <property name="filterChainDefinitions">
+            <value>
+                /shiropage/login.html = anon
+                /shiropage/suc.jsp = authc
+            </value>
+        </property>
+    </bean>
+
+
+
+    <!-- 设置隔离级别 -->
+    <tx:advice id="txadvice" transaction-manager="transactionManager">
+        <tx:attributes>
+            <tx:method name="insert*" propagation="REQUIRED" />
+            <tx:method name="update*" propagation="REQUIRED" />
+            <tx:method name="delete*" propagation="REQUIRED" />
+            <tx:method name="*" read-only="true" />
+        </tx:attributes>
+    </tx:advice>
+
+    <!-- aop配置 -->
+    <aop:config>
+        <aop:pointcut id="pointcut" expression="execution(* com.*..*.service.impl.*.*(..))"/>
+        <aop:advisor advice-ref="txadvice" pointcut-ref="pointcut"/>
+    </aop:config>
+</beans>
