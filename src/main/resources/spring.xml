@@ -66,11 +66,10 @@
         <property name="securityManager" ref="securityManager"/>
         <property name="loginUrl" value="/shiropage/login.html"/>
         <property name="successUrl" value="/shiropage/suc.jsp"/>
-        <property name="unauthorizedUrl" value="/shiropage/fail.jsp"/>
+        <property name="unauthorizedUrl" value="/un.jsp"/>
         <property name="filterChainDefinitions">
             <value>
-                /shiropage/login.html = anon
-                /shiropage/suc.jsp = authc
+                /**=myfilter <!-- 使用自定义安全过滤器 -->
             </value>
         </property>
     </bean>

@@ -4,6 +4,7 @@ import com.jaremo.test_shiro.ssshiro.dao.UserMapper;
 import com.jaremo.test_shiro.ssshiro.domain.User;
 import org.apache.shiro.authc.*;
 import org.apache.shiro.authz.AuthorizationInfo;
+import org.apache.shiro.authz.SimpleAuthorizationInfo;
 import org.apache.shiro.realm.AuthorizingRealm;
 import org.apache.shiro.subject.PrincipalCollection;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,10 +27,11 @@ public class MyRealm extends AuthorizingRealm {
         String userName = principalCollection.getPrimaryPrincipal().toString();
         Set<String> roles = userMapper.queryRoleByUserName(userName);
         Set<String> perms = userMapper.queryPermByUserName(userName);
-        SimpleAccount sa = new SimpleAccount();
-        sa.setRoles(roles);
-        sa.setStringPermissions(perms);
-        return sa;
+
+        SimpleAuthorizationInfo authorizationInfo = new SimpleAuthorizationInfo();
+        authorizationInfo.setRoles(roles);
+        authorizationInfo.setStringPermissions(perms);
+        return authorizationInfo;
     }
 
     /*
@@ -40,7 +42,6 @@ public class MyRealm extends AuthorizingRealm {
     protected AuthenticationInfo doGetAuthenticationInfo(AuthenticationToken authenticationToken) throws AuthenticationException {
         UsernamePasswordToken token = (UsernamePasswordToken)authenticationToken;
         User tempUser = userMapper.queryUserByUserName(token.getUsername());
-        System.out.println(tempUser);
         if(tempUser!=null && tempUser.getPassword().equals(new String(token.getPassword()))){
             SimpleAccount sa = new SimpleAccount(token.getUsername(),token.getPassword(),"MyRealm");
             return sa;
