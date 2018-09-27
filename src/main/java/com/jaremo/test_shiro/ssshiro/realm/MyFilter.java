@@ -10,25 +10,18 @@ import javax.servlet.ServletResponse;
 import java.util.*;
 import java.util.regex.Pattern;
 
-import javax.servlet.Filter;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 
-import org.apache.shiro.spring.web.ShiroFilterFactoryBean;
 import org.apache.shiro.subject.Subject;
 import org.apache.shiro.util.CollectionUtils;
-import org.apache.shiro.web.filter.authc.FormAuthenticationFilter;
-import org.apache.shiro.web.filter.authz.AuthorizationFilter;
-import org.apache.shiro.web.filter.authz.PermissionsAuthorizationFilter;
-import org.apache.shiro.web.filter.authz.RolesAuthorizationFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+
 @Component
 public class MyFilter extends AuthorizationFilter {
 
-    @Autowired
-    private ShiroFilterFactoryBean sffb;
+//    @Autowired
+//    private ShiroFilterFactoryBean sffb;
     /**
      * 匹配指定过滤器规则的url
      * @param regex
@@ -47,7 +40,6 @@ public class MyFilter extends AuthorizationFilter {
         if(regex.indexOf("/.*.*/")>=0){
             regex=regex.replaceAll("/\\.\\*\\.\\*/", "((/.*/)+|/)");
         }
-        System.out.println(regex+"----"+url);
         return Pattern.matches(regex, url);
     }
 
@@ -63,12 +55,17 @@ public class MyFilter extends AuthorizationFilter {
         // 获取请求url进行权限认证
         String url=req.getRequestURI();
         // 通过url,查询出访问该url需要什么权限
-        Menu menu = userMapper.queryMenuByMenuUrl(url);
-        if(menu == null){
+        List<Menu> menuList = userMapper.queryMenu();
+        if(menuList.size()==0){
             return false;
         }
         // 获取授权类型
-        String urlAuth=menu.getMenuFilter();
+        String urlAuth=null;
+        for (Menu menu:menuList) {
+            if(matchUrl(menu.getMenuUrl(),url)){ // 利用数据库中的统一资源定位符正则表达式,匹配用户请求的url地址
+                urlAuth = menu.getMenuFilter(); // 将匹配的url的过滤规则赋值给urlAuth
+            }
+        }
         if(urlAuth==null){
             return false;
         }
